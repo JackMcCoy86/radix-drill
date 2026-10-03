@@ -1075,6 +1075,32 @@
               : "",
         };
       }
+      function genBin2Dec(n) {
+        const v =
+          n === 8
+            ? R(16, 255)
+            : n === 16
+              ? R(256, MASK(16))
+              : R(P(16), MASK(32));
+        const terms = [];
+        for (let k = n - 1; k >= 0; k--) {
+          if ((v >>> k) & 1) terms.push(2 ** k);
+        }
+        return {
+          prompt: `Convert ${c(B(v, n))} to decimal (unsigned).`,
+          kind: "dec",
+          width: n,
+          expect: v,
+          answer: String(v),
+          sol: 
+            step("Each 1 bit is worth 2 raised to its position. Find the 1s:", bitStrip(bin(v, n))) +
+            step(`Add their place values: ${terms.join(" + ")} = ${v}.`),
+          diagnose: (x) =>
+            x === sgn(v, n) && x !== v
+              ? "That's the signed reading. The question asks for the unsigned value."
+              : "",
+        };
+      }
       function genBin2Hex(n) {
         const v = R(1, MASK(n)),
           shown = n === 8 ? bin(v, 8) : grp(bin(v, n), 8);
@@ -1449,6 +1475,12 @@
           label: "Hex → decimal",
           group: "Conversions",
           gen: genHex2Dec,
+        },
+        {
+          id: "bin2dec", 
+          label: "Binary → decimal", 
+          group: "Conversions", 
+          gen: genBin2Dec ,
         },
         {
           id: "bin2hex",

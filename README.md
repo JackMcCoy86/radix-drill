@@ -36,6 +36,6 @@ On a phone, use "Add to Home Screen" to open it like an app.
 
 ## Roadmap
 
-- [ ] Binary → decimal conversions
+- [x] Binary → decimal conversions
 - [ ] Subtraction in the carry/overflow drill
 - [ ] Branches, the stack, and PUSH/POP
