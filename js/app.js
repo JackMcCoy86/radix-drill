@@ -347,7 +347,7 @@ function renderExample() {
     p = t.gen(WIDTH);
   $("lessonEx").innerHTML =
     `<div class="lsec-head"><h3 class="eyebrow">Worked example</h3><button type="button" class="btn ghost small" data-act="ex">New example</button></div>
-  <div class="prompt block"><p>${p.prompt}</p></div><ol class="steps">${p.sol}</ol><p class="result-line">Answer: ${p.kind === "choice" ? p.answer : c(p.answer)}</p>`;
+  <div class="prompt block">${p.block ? p.prompt : `<p>${p.prompt}</p>`}</div><ol class="steps">${p.sol}</ol><p class="result-line">Answer: ${p.kind === "choice" ? p.answer : c(p.answer)}</p>`;
 }
 
 $("drillTabs").addEventListener("click", (e) => {

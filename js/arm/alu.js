@@ -562,4 +562,4 @@ function genCond() {
   };
 }
 
-export { genALU, genShift, genImm, genFlags, genCond };
+export { genALU, genShift, genImm, genFlags, genCond, COND };
