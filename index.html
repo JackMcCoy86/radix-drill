@@ -386,14 +386,6 @@
         color: var(--accent);
         letter-spacing: 0.02em;
       }
-      .tag {
-        font-family: var(--font-mono);
-        font-size: 0.75rem;
-        border: 1px solid var(--line);
-        border-radius: 4px;
-        padding: 0 0.4em;
-        color: var(--muted);
-      }
       .meta .n {
         margin-left: auto;
         font-family: var(--font-mono);
@@ -985,14 +977,6 @@
               ><button type="button" data-m="learn">Learn</button>
             </div>
           </div>
-          <div class="ctrl" id="widthCtrl">
-            <span id="wLbl">Width</span>
-            <div class="seg" role="group" aria-labelledby="wLbl" id="widthSeg">
-              <button type="button" data-w="8">8-bit</button
-              ><button type="button" data-w="16">16-bit</button
-              ><button type="button" data-w="32">32-bit</button>
-            </div>
-          </div>
           <div class="ctrl" id="setCtrl">
             <span id="sLbl">Set</span>
             <div class="seg" role="group" aria-labelledby="sLbl" id="setSeg">
@@ -1360,7 +1344,7 @@
         };
       }
       function genRange() {
-        const w = pick([4, 5, 6, 8, 10, 12, 16]);
+        const w = pick([4, 8, 16, 32]);
         const V = [
           [
             "u",
@@ -1674,13 +1658,6 @@
           fixed: true,
         },
         {
-          id: "signext",
-          label: "Sign & zero extension",
-          group: "Signed values",
-          gen: genSignExt,
-          fixed: true,
-        },
-        {
           id: "addflags",
           label: "Carry & overflow",
           group: "Signed values",
@@ -1870,23 +1847,6 @@
           watch: [
             "Answering 2<sup>n</sup> for the largest unsigned value. Counting starts at 0, so it's 2<sup>n</sup> − 1.",
             "Making two's complement symmetric. It has one more negative value than positive, because 0 takes one of the non-negative patterns.",
-          ],
-        },
-        signext: {
-          sum: "Widen a value by filling the new bits with 0s or with copies of the sign bit.",
-          idea: "When a byte or halfword is loaded into a 32-bit register, the upper bits have to be filled with something. That choice decides whether the value keeps its unsigned or its signed meaning.",
-          how: [
-            `Zero extension fills every new bit with 0, so the unsigned value stays the same. ${c("LDRB")} and ${c("LDRH")} do this.`,
-            `Sign extension copies the top bit (the sign bit) into every new bit, so the signed value stays the same. ${c("LDRSB")} and ${c("LDRSH")} do this.`,
-            "In hex, a sign-extended negative value gains leading Fs. A positive one gains leading 0s.",
-          ],
-          tip: [
-            "Example",
-            `The byte ${c("0x9C")} has a top bit of 1. ${c("LDRB")} gives ${c("0x0000009C")} (156), and ${c("LDRSB")} gives ${c("0xFFFFFF9C")} (−100).`,
-          ],
-          watch: [
-            `Mixing the two up. The S in ${c("LDRSB")} and ${c("LDRSH")} stands for signed.`,
-            "Filling with Fs when the top bit is 0. Sign-extending a positive value just adds 0s.",
           ],
         },
         addflags: {
@@ -3296,17 +3256,25 @@
           gen: genMem,
           fixed: true,
         },
+        {
+          id: "signext",
+          label: "Sign & zero extension",
+          group: "Memory",
+          gen: genSignExt,
+          fixed: true,
+        },
       ];
       const DRILLS = [
         {
           id: "radix",
           label: "Number systems",
           topics: RADIX_TOPICS,
-          width: true,
           lessons: RADIX_LESSONS,
         },
-        { id: "asm", label: "ARM assembly", topics: ASM_TOPICS, width: false },
+        { id: "asm", label: "ARM assembly", topics: ASM_TOPICS },
       ];
+      /* Number systems problems are 8-bit. The generators also handle 16 and 32. */
+      const WIDTH = 8;
       const ALL = [...RADIX_TOPICS, ...ASM_TOPICS];
 
       function parse(raw, kind) {
@@ -3362,7 +3330,6 @@
           settings: {
             drill: "radix",
             mode: "practice",
-            width: 8,
             setSize: 0,
             topics: {
               radix: RADIX_TOPICS.map((t) => t.id),
@@ -3385,7 +3352,6 @@
           const d = JSON.parse(localStorage.getItem(KEY) || "null");
           if (d && d.settings) {
             const ds = d.settings;
-            if ([8, 16, 32].includes(ds.width)) S.settings.width = ds.width;
             if ([0, 10, 25].includes(ds.setSize))
               S.settings.setSize = ds.setSize;
             if (DRILLS.some((x) => x.id === ds.drill))
@@ -3434,14 +3400,8 @@
             (d) =>
               `<button type="button" role="tab" data-d="${d.id}" aria-selected="${d.id === S.settings.drill}">${d.label}</button>`,
           ).join("");
-          $("widthCtrl").hidden = !drill().width;
         }
         function renderSegs() {
-          document
-            .querySelectorAll("#widthSeg button")
-            .forEach((b) =>
-              b.setAttribute("aria-pressed", +b.dataset.w === S.settings.width),
-            );
           document
             .querySelectorAll("#setSeg button")
             .forEach((b) =>
@@ -3477,8 +3437,9 @@
           }
           const on = onTopics(),
             pool = on.length > 1 ? on.filter((id) => id !== S.last) : on;
-          const t = drill().topics.find((x) => x.id === pick(pool));
-          const p = t.gen(S.settings.width);
+          const id = pick(pool),
+            t = drill().topics.find((x) => x.id === id);
+          const p = t.gen(WIDTH);
           p.topic = t;
           S.cur = p;
           S.graded = false;
@@ -3502,8 +3463,7 @@
             body = `<form class="answer" id="ansForm"><div class="flagset" id="flagset" role="group" aria-label="Flags">${["N", "Z", "C", "V"].map((f, i) => `<button type="button" class="flag" data-i="${i}" aria-pressed="false" aria-label="${f} flag"><span>${f}</span><b>0</b></button>`).join("")}</div><button class="btn primary" type="submit">Check</button></form>`;
           else
             body = `<form class="answer" id="ansForm" autocomplete="off"><label class="sr" for="ans">Your answer</label><div class="field"><span class="unit">${units[p.kind]}</span><input id="ans" type="text" inputmode="${p.kind === "bin" ? "numeric" : "text"}" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="${ph[p.kind]}"></div><button class="btn primary" type="submit">Check</button></form>`;
-          const showW = drill().width && !p.topic.fixed;
-          stage.innerHTML = `<div class="meta"><span class="topic">${p.topic.label}</span>${showW ? `<span class="tag">${p.width}-bit</span>` : ""}${size ? `<span class="n">${S.ses.done + 1} / ${size}</span>` : ""}</div>
+          stage.innerHTML = `<div class="meta"><span class="topic">${p.topic.label}</span>${size ? `<span class="n">${S.ses.done + 1} / ${size}</span>` : ""}</div>
     <div class="prompt${p.block ? " block" : ""}">${p.block ? p.prompt : `<p>${p.prompt}</p>`}</div>${body}<div class="feedback" id="fb"></div><div id="solWrap"></div>
     <div class="actions" id="actions"><button type="button" class="btn ghost" id="revealBtn">Show solution</button></div>`;
           if (p.kind === "choice")
@@ -3715,10 +3675,9 @@
         }
         function renderExample() {
           const t = drill().topics.find((x) => x.id === S.lesson),
-            p = t.gen(S.settings.width),
-            w = drill().width && !t.fixed ? ` · ${p.width}-bit` : "";
+            p = t.gen(WIDTH);
           $("lessonEx").innerHTML =
-            `<div class="lsec-head"><h3 class="eyebrow">Worked example${w}</h3><button type="button" class="btn ghost small" data-act="ex">New example</button></div>
+            `<div class="lsec-head"><h3 class="eyebrow">Worked example</h3><button type="button" class="btn ghost small" data-act="ex">New example</button></div>
     <div class="prompt block"><p>${p.prompt}</p></div><ol class="steps">${p.sol}</ol><p class="result-line">Answer: ${p.kind === "choice" ? p.answer : c(p.answer)}</p>`;
         }
 
@@ -3744,17 +3703,6 @@
           save();
           renderMode();
           show();
-        });
-        $("widthSeg").addEventListener("click", (e) => {
-          const b = e.target.closest("button");
-          if (!b) return;
-          S.settings.width = +b.dataset.w;
-          save();
-          renderSegs();
-          if (learning()) {
-            if (S.cur && !S.graded) S.cur = null;
-            if (S.lesson) renderExample();
-          } else if (S.cur && !S.graded) next(false);
         });
         stage.addEventListener("click", (e) => {
           const b = e.target.closest("[data-l], [data-act]");

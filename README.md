@@ -16,9 +16,8 @@ example. Each guide links straight to practicing that topic.
 ## Drills
 
 **Number systems**
-- Conversions between binary, hex, and decimal (8, 16, and 32-bit)
+- Conversions between binary, hex, and decimal (8-bit)
 - Two's complement, negation, and representation ranges
-- Sign and zero extension
 - Carry vs. signed overflow (ADDS and SUBS)
 
 **ARM assembly (A32, GNU syntax)**
@@ -29,6 +28,7 @@ example. Each guide links straight to practicing that topic.
 - Condition codes (signed vs. unsigned comparisons)
 - Program tracing with loops and conditional execution
 - Load/store addressing modes and little-endian memory
+- Sign and zero extension (LDRB, LDRSB, LDRH, LDRSH)
 
 ## How it works
 
