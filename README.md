@@ -9,6 +9,10 @@ Each answer is checked instantly and comes with a step-by-step worked solution.
 Common mistakes (like forgetting to add 1 in two's complement, or reading a
 little-endian byte backwards) get specific feedback.
 
+For number systems, **Learn** mode has a short guide to each problem type: how
+it works, a reference table where it helps, common mistakes, and a fresh worked
+example. Each guide links straight to practicing that topic.
+
 ## Drills
 
 **Number systems**
