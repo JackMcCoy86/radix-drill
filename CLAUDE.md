@@ -60,8 +60,12 @@ The app code is guarded by `typeof document !== "undefined"`, so all the logic r
 Node without a browser. Quick check that every generator still works:
 
 ```sh
-node -e 'const h=require("fs").readFileSync("index.html","utf8");eval(h.slice(h.indexOf("<script>")+8,h.lastIndexOf("</script>"))+";for(const t of ALL){const p=t.gen(WIDTH);console.log(t.id,p.kind,p.answer)}")'
+node -e 'const h=require(`fs`).readFileSync(`index.html`,`utf8`);eval(h.slice(h.indexOf(`<script>`)+8,h.lastIndexOf(`</script>`))+`;for(const t of ALL){const p=t.gen(WIDTH);console.log(t.id,p.kind,p.answer)}`)'
 ```
+
+The JS strings use backticks, not double quotes, so the same command works in PowerShell
+(Windows PowerShell 5.1 strips inner double quotes when passing arguments to `node`) and
+in bash. It prints one line per topic; an error means a generator broke.
 
 Use this instead of opening the page whenever the change is logic only. For visual
 changes, open `index.html` in a browser.
