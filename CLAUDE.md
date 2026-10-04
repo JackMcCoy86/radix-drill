@@ -1,33 +1,38 @@
 # Radix Drill
 
 Practice drills for number systems and ARM assembly (A32, GNU syntax). Static site on
-GitHub Pages: everything lives in ONE file, `index.html` (~3,800 lines, ~135 KB). No build
-step, no dependencies, no frameworks. Keep it that way.
+GitHub Pages. Plain HTML, CSS, and ES modules: no build step, no dependencies, no
+frameworks. Keep it that way. (`package.json` only exists so Node treats the `.js` files
+as modules for the test script.)
 
-## Token rule: never read index.html whole
+## Token rule: open only the file you need
 
-Reading the full file costs ~35k tokens. Instead, `grep -n` for the section marker or
-function name you need, then read only that line range. Line numbers drift as the file
-changes, so search for the markers below rather than trusting fixed numbers.
+Each file covers one area, so read the one that matters instead of everything. For large
+files (`styles.css`, `alu.js`, `generators.js`, `app.js`), `grep -n` for the function or
+selector first and read just that range.
 
-## Map of index.html (search for these)
+## Map
 
-| Section | Find it with |
+| File | What's in it |
 |---|---|
-| CSS (theme vars, then layout) | the two `<style>` blocks at the top |
-| Page skeleton (header, tabs, controls) | `class="wrap"` |
-| Number formatting helpers (`R`, `bin`, `hex`, `H`, `B`) | `number helpers` |
-| Solution renderers (`bitStrip`, `divTable`, `nibbleMap`, `placeTable`) | `solution renderers` |
-| Number systems generators (`genDec2Bin` ... `genAddFlags`) | `NUMBER SYSTEMS DRILL` |
-| Number systems topic list | `const RADIX_TOPICS` |
-| Learn mode lessons | `const RADIX_LESSONS` |
-| ARM model (registers, NZCV, shifter, memory, `exec`) | `ARM ASSEMBLY DRILL` |
-| ARM generators (`genALU`, `genShift`, `genImm`, `genFlags`, `genCond`, `genTrace`, `genMem`) | `function gen<Name>` |
-| Trace programs for `genTrace` | `const TRACES` |
-| ARM topic list | `const ASM_TOPICS` |
-| Drill registry | `const DRILLS` |
-| Answer parsing | `function parse(` |
-| App UI, state, grading, Learn mode | `---------- app ----------` |
+| `index.html` | Page skeleton only (header, tabs, controls, `#stage`) |
+| `styles.css` | All CSS: base reset, theme vars, layout |
+| `js/util.js` | Number and HTML helpers: `R`, `P`, `MASK`, `bin`, `hex`, `grp`, `sgn`, `H`, `B`, `c`, `pick`, `step`, `fmtNeg` |
+| `js/render.js` | Solution renderers: `bitStrip`, `nibbleMap`, `divTable`, `placeTable` |
+| `js/radix/generators.js` | Number systems generators (`genDec2Bin` ... `genAddFlags`, plus `genSignExt`) |
+| `js/radix/topics.js` | `RADIX_TOPICS` |
+| `js/radix/lessons.js` | `RADIX_LESSONS` (Learn mode, keyed by topic id) |
+| `js/arm/model.js` | A32 model (registers, NZCV, shifter, `encImm`, memory, `exec`, `condOK`) and display helpers (`txt`, `hlAsm`, `asmBlock`, `regTable`) |
+| `js/arm/alu.js` | `genALU`, `genShift`, `genImm`, `genFlags`, `genCond`, `COND` |
+| `js/arm/trace.js` | `TRACES` programs, `runProg`, `genTrace` |
+| `js/arm/memory.js` | `genMem` |
+| `js/arm/topics.js` | `ASM_TOPICS` |
+| `js/drills.js` | `DRILLS` registry, `WIDTH`, `ALL` |
+| `js/parse.js` | `parse(raw, kind)` answer parsing |
+| `js/app.js` | Entry point. UI, state, grading, Learn mode (browser only) |
+
+Dependencies only point downward: util → render → radix/arm generators → topics →
+drills → app. Keep it that way; a generator file should never import from `app.js`.
 
 ## How a drill works
 
@@ -43,9 +48,17 @@ Each topic is `{ id, label, group, gen }` in `RADIX_TOPICS` or `ASM_TOPICS`. A g
 - `sol` is HTML built from `step(...)` and the solution renderers.
 - `diagnose(x)` returns specific feedback for a common wrong answer, or `""`.
 
-Adding a topic = write a `gen...` function in the right drill section and add one entry to
-that drill's topic list. The UI picks it up automatically. Number systems lessons are keyed
-by topic id in `RADIX_LESSONS`.
+Adding a topic:
+1. Write the `gen...` function in the right file and add it to that file's `export { ... }`
+   list at the bottom.
+2. Import it in that drill's `topics.js` and add one entry to the topic list.
+
+The UI picks it up automatically. A new drill (for example branches and the stack) gets
+its own folder like `js/arm/` and one entry in `DRILLS`.
+
+Modules don't share globals. If a file uses a helper, it must import it, and the file
+that defines it must export it. A missing import shows up as a `ReferenceError` in the
+test or the browser console.
 
 ## Conventions
 
@@ -53,19 +66,20 @@ by topic id in `RADIX_LESSONS`.
 - Progress is stored in `localStorage` under `radix-drill-v1`. Changing the shape of `S`
   needs to stay compatible with saved data.
 - Feedback text: plain, short sentences that explain the mistake.
+- Formatting follows Prettier defaults.
 
 ## Testing
 
-The app code is guarded by `typeof document !== "undefined"`, so all the logic runs in
-Node without a browser. Quick check that every generator still works:
+All the logic runs in Node without a browser:
 
 ```sh
-node -e 'const h=require(`fs`).readFileSync(`index.html`,`utf8`);eval(h.slice(h.indexOf(`<script>`)+8,h.lastIndexOf(`</script>`))+`;for(const t of ALL){const p=t.gen(WIDTH);console.log(t.id,p.kind,p.answer)}`)'
+node test/check.js
 ```
 
-The JS strings use backticks, not double quotes, so the same command works in PowerShell
-(Windows PowerShell 5.1 strips inner double quotes when passing arguments to `node`) and
-in bash. It prints one line per topic; an error means a generator broke.
+It runs every generator 200 times, checks each problem has the fields the app needs,
+and prints one line per topic. Pass a number to change the run count
+(`node test/check.js 1000`). Use this whenever the change is logic only.
 
-Use this instead of opening the page whenever the change is logic only. For visual
-changes, open `index.html` in a browser.
+For visual changes, open the site through a local server (VS Code Live Server, or
+`python -m http.server`). Double-clicking `index.html` won't work: browsers block ES
+modules on `file://` pages.

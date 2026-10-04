@@ -32,8 +32,8 @@ example. Each guide links straight to practicing that topic.
 
 ## How it works
 
-Runs entirely in the browser as a single HTML file, with no install or account
-needed. Assembly answers come from a small built-in model of the 32-bit ARM
+Runs entirely in the browser as plain HTML, CSS, and JavaScript modules, with no
+build step, install, or account needed. Assembly answers come from a small built-in model of the 32-bit ARM
 instruction set. Progress is saved locally in your browser.
 
 On a phone, use "Add to Home Screen" to open it like an app.
