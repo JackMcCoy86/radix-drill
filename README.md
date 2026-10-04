@@ -15,7 +15,7 @@ little-endian byte backwards) get specific feedback.
 - Conversions between binary, hex, and decimal (8, 16, and 32-bit)
 - Two's complement, negation, and representation ranges
 - Sign and zero extension
-- Carry vs. signed overflow
+- Carry vs. signed overflow (ADDS and SUBS)
 
 **ARM assembly (A32, GNU syntax)**
 - Arithmetic, logic, and barrel-shifter operands
@@ -37,5 +37,5 @@ On a phone, use "Add to Home Screen" to open it like an app.
 ## Roadmap
 
 - [x] Binary → decimal conversions
-- [ ] Subtraction in the carry/overflow drill
+- [x] Subtraction in the carry/overflow drill
 - [ ] Branches, the stack, and PUSH/POP

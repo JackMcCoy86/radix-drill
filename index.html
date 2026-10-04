@@ -1398,7 +1398,8 @@
         };
       }
       function genAddFlags(n) {
-        const target = R(0, 3);
+        const sub = Math.random() < 0.5,
+          target = R(0, 3);
         let a,
           b,
           C,
@@ -1407,34 +1408,70 @@
         do {
           a = R(0, MASK(n));
           b = R(0, MASK(n));
-          C = a + b > MASK(n);
-          const ss = sgn(a, n) + sgn(b, n);
+          C = sub ? a >= b : a + b > MASK(n);
+          const ss = sub ? sgn(a, n) - sgn(b, n) : sgn(a, n) + sgn(b, n);
           V = ss > P(n - 1) - 1 || ss < -P(n - 1);
           k++;
         } while ((C ? 1 : 0) + (V ? 2 : 0) !== target && k < 1000);
         const out = (C ? 1 : 0) + (V ? 2 : 0),
           sum = a + b,
-          r = sum % P(n),
+          r = sub ? (a - b + P(n)) % P(n) : sum % P(n),
           sa = sgn(a, n),
           sb = sgn(b, n),
           sr = sgn(r, n),
           ma = a >= P(n - 1) ? 1 : 0,
           mb = b >= P(n - 1) ? 1 : 0,
           mr = r >= P(n - 1) ? 1 : 0;
-        let block;
-        if (n <= 16) {
-          block = `<pre class="calc">    ${B(a, n)}   ${H(a, n)}\n+   ${B(b, n)}   ${H(b, n)}\n${"─".repeat(B(a, n).length + 4)}\n  ${C ? 1 : 0} ${B(r, n)}   ${H(r, n)}\n  ↑ carry out of bit ${n - 1}</pre>`;
-        } else {
-          block = `<pre class="calc">  ${H(a, n)}\n+ ${H(b, n)}\n${"─".repeat(12)}\n${C ? "1" : " "} ${H(r, n)}   ${C ? "← a 1 carries out of bit 31" : "(no carry out)"}</pre>`;
-        }
         const choices = [
           "No carry, no overflow (C=0, V=0)",
           "Carry out only (C=1, V=0)",
           "Signed overflow only (C=0, V=1)",
           "Both (C=1, V=1)",
         ];
+        const diagnose = (x) =>
+          sub && x === (out ^ 1)
+            ? "On ARM, C after a subtraction is the opposite of a borrow: C = 1 when no borrow was needed (first operand ≥ second, unsigned)."
+            : (x === 1 && out === 2) || (x === 2 && out === 1)
+              ? "C and V are swapped. C comes from the unsigned view, V from the signed view."
+              : "";
+        if (sub) {
+          const nb = inv(b, n),
+            block =
+              n <= 16
+                ? `<pre class="calc">    ${B(a, n)}   ${H(a, n)}\n+   ${B(nb, n)}   ${H(nb, n)}   ← NOT ${H(b, n)}\n+   ${" ".repeat(B(a, n).length - 1)}1\n${"─".repeat(B(a, n).length + 4)}\n  ${C ? 1 : 0} ${B(r, n)}   ${H(r, n)}\n  ↑ carry out of bit ${n - 1}</pre>`
+                : `<pre class="calc">  ${H(a, n)}\n+ ${H(nb, n)}   ← NOT ${H(b, n)}\n+ ${" ".repeat(9)}1\n${"─".repeat(12)}\n${C ? "1" : " "} ${H(r, n)}   ${C ? "← a 1 carries out of bit 31" : "(no carry out)"}</pre>`;
+          return {
+            prompt: `Compute ${c(H(a, n))} − ${c(H(b, n))} as ${n}-bit values. Which flags would ${c("SUBS")} set?`,
+            kind: "choice",
+            width: n,
+            expect: out,
+            choices,
+            answer: choices[out],
+            sol:
+              step(
+                "ARM subtracts by adding: a − b = a + NOT b + 1. The carry out of that addition becomes C.",
+                block,
+              ) +
+              step(
+                `<strong>Unsigned view (C flag):</strong> ${C ? `${a} ≥ ${b}, so no borrow is needed: C = 1.` : `${a} < ${b}, so a borrow is needed: C = 0.`} On ARM, C after a subtraction means “no borrow”.`,
+              ) +
+              step(
+                `<strong>Signed view (V flag):</strong> ${fmtNeg(sa)} − ${fmtNeg(sb)} = ${fmtNeg(sa - sb)}. ${V ? `That's outside ${fmtNeg(-P(n - 1))} … ${P(n - 1) - 1}, so the ${n}-bit result reads as ${fmtNeg(sr)}: V = 1.` : `That's inside ${fmtNeg(-P(n - 1))} … ${P(n - 1) - 1}: V = 0.`}`,
+              ) +
+              step(
+                `Shortcut for V: overflow can only happen when the operands have different sign bits, and it happens when the result's sign bit differs from the first operand's. Here the sign bits are ${ma} − ${mb} → ${mr}.`,
+              ),
+            diagnose,
+          };
+        }
+        let block;
+        if (n <= 16) {
+          block = `<pre class="calc">    ${B(a, n)}   ${H(a, n)}\n+   ${B(b, n)}   ${H(b, n)}\n${"─".repeat(B(a, n).length + 4)}\n  ${C ? 1 : 0} ${B(r, n)}   ${H(r, n)}\n  ↑ carry out of bit ${n - 1}</pre>`;
+        } else {
+          block = `<pre class="calc">  ${H(a, n)}\n+ ${H(b, n)}\n${"─".repeat(12)}\n${C ? "1" : " "} ${H(r, n)}   ${C ? "← a 1 carries out of bit 31" : "(no carry out)"}</pre>`;
+        }
         return {
-          prompt: `Add ${c(H(a, n))} + ${c(H(b, n))} as ${n}-bit values. Which flags would ${c("ADDS")} set?`,
+          prompt: `Add${c(H(a, n))} + ${c(H(b, n))} as ${n}-bit values. Which flags would ${c("ADDS")} set?`,
           kind: "choice",
           width: n,
           expect: out,
@@ -1454,6 +1491,7 @@
             step(
               `Shortcut for V: overflow can only happen when both operands have the same sign bit, and it happens when the result's sign bit differs. Here the sign bits are ${ma} + ${mb} → ${mr}.`,
             ),
+          diagnose,
         };
       }
 
